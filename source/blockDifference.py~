@@ -1,0 +1,90 @@
+import os
+import sys
+import matplotlib.pyplot as plt
+from skimage import io
+
+args = sys.argv
+folder = args[1] + '/'
+grayImagesFolder = '../grayImages/'
+fullImagesPath = grayImagesFolder + folder
+fullColorImagesPath = '../originalImages/' + folder
+fullCutScenesPath = '../cutScenes/' + folder + 'blockDifference/'
+graphName = 'blockDifferenceGraph' + args[1]
+T1 = int(args[2]) #81
+T2 = int(args[3]) #3
+rate = int(args[4]) #1
+block1Dsize = 4
+block2Dsize = 16
+xAxis = []
+yAxis = []
+
+def cleanFolder(folder):
+  for fileName in os.listdir(folder):
+    filePath = os.path.join(folder, fileName)
+    os.unlink(filePath)
+
+def copyCutScenes(cutScenes):
+    cleanFolder(fullCutScenesPath)
+    count = 1
+    for image in cutScenes:
+      img = io.imread(fullColorImagesPath + image)
+      for index in range(rate):
+        imageName = '%04d' % count + '.png'
+        count = count + 1
+        io.imsave(fullCutScenesPath + imageName, img)
+
+def isCutScene(previousFrame, nextFrame, index): # two-dimentional array
+  differentBlocks = 0
+  shape = previousFrame.shape
+  if (shape[0] * shape[1]) % (block2Dsize) != 0:
+    print 'ERROR in the size'
+    return False
+  
+  blockHeight = shape[0] / 4
+  blockWidth = shape[1] / 4
+  T1Adjusted = (blockHeight * blockWidth) * T1
+   
+  for blockLine in range(block1Dsize):
+    for blockColumn in range(block1Dsize):
+      totalQuadraticError = 0
+      for line in range(blockHeight):
+        for column in range(blockWidth):
+          currentLine = (blockLine * blockHeight) + line;
+          currentColumn = (blockColumn * blockWidth) + column;
+          quadraticError = pow(int(previousFrame[currentLine][currentColumn]) - int(nextFrame[currentLine][currentColumn]), 2)
+          totalQuadraticError = totalQuadraticError + quadraticError
+          
+      if totalQuadraticError > T1Adjusted:
+        differentBlocks = differentBlocks + 1
+  
+  xAxis.append(index)
+  yAxis.append(differentBlocks)
+  return differentBlocks > T2
+
+def saveGraph(limiar):
+  fig = plt.figure()
+  plt.plot(xAxis, yAxis)
+  plt.plot(xAxis, [limiar] * len(xAxis))
+  plt.xlabel('frames')
+  plt.ylabel('block difference')
+  plt.legend(['Frame difference', 'Limiar'], loc='upper left')
+  fig.savefig('tmp/' + graphName + '.png')
+
+def main():
+  cutScenes = []
+  xAxis.append(0)
+  yAxis.append(0) # initial frame the difference is zero
+  files = sorted(os.listdir(fullImagesPath))
+  cutScenes.append(files[0]) # the first scene start the process of comparison
+  for index in range(len(files) - 1):
+  #for index in range(50):
+    frame1 = io.imread(fullImagesPath + files[index])
+    frame2 = io.imread(fullImagesPath + files[index + 1])
+    if isCutScene(frame1, frame2, index + 1):
+      cutScenes.append(files[index + 1])
+  
+  print cutScenes
+  copyCutScenes(cutScenes)
+  saveGraph(T2)
+      
+main()

@@ -1,0 +1,81 @@
+import os
+import sys
+import matplotlib.pyplot as plt
+from skimage import io
+from shutil import copyfile
+
+args = sys.argv
+folder = args[1] + '/'
+grayImagesFolder = '../grayImages/'
+fullImagesPath = grayImagesFolder + folder
+fullColorImagesPath = '../originalImages/' + folder
+fullCutScenesPath = '../cutScenes/' + folder + 'pixelDifference/'
+graphName = 'pixelDifferenceGraph' + args[1]
+T1 = int(args[2])
+T2 = int(args[3]) #percentage
+rate = int(args[4])
+xAxis = []
+yAxis = []
+
+def cleanFolder(folder):
+  for fileName in os.listdir(folder):
+    filePath = os.path.join(folder, fileName)
+    os.unlink(filePath)
+
+def copyCutScenes(cutScenes):
+    cleanFolder(fullCutScenesPath)
+    count = 1
+    for image in cutScenes:
+      img = io.imread(fullColorImagesPath + image)
+      for index in range(rate):
+        imageName = '%04d' % count + '.png'
+        count = count + 1
+        io.imsave(fullCutScenesPath + imageName, img)
+
+def computeLimiar(frame):
+  shape = frame.shape
+  return (shape[0] * shape[1]) * (T2/100.0)
+
+def isCutScene(previousFrame, nextFrame, index): # two-dimentional array
+  shape = previousFrame.shape
+  countPixelDifference = 0
+  limiar = computeLimiar(previousFrame)
+  
+  for line in range(shape[0]):
+    for column in range(shape[1]):
+      previousPixel = previousFrame[line][column]
+      nextPixel = nextFrame[line][column]
+      if abs(int(previousPixel) - int(nextPixel)) > T1:
+        countPixelDifference = countPixelDifference + 1
+  
+  xAxis.append(index)
+  yAxis.append(countPixelDifference)
+  return countPixelDifference > limiar
+
+def saveGraph(limiar):
+  fig = plt.figure()
+  plt.plot(xAxis, yAxis)
+  plt.plot(xAxis, [limiar] * len(xAxis))
+  plt.xlabel('frames')
+  plt.ylabel('pixel difference')
+  plt.legend(['Frame difference', 'Limiar'], loc='upper left')
+  fig.savefig('tmp/' + graphName + '.png')
+
+def main():
+  cutScenes = []
+  xAxis.append(0)
+  yAxis.append(0) # initial frame the difference is zero
+  files = sorted(os.listdir(fullImagesPath))
+  cutScenes.append(files[0]) # the first scene start the process of comparison
+  for index in range(len(files) - 1):
+  #for index in range(5):
+    frame1 = io.imread(fullImagesPath + files[index])
+    frame2 = io.imread(fullImagesPath + files[index + 1])
+    if isCutScene(frame1, frame2, index + 1):
+      cutScenes.append(files[index + 1])
+  
+  print cutScenes
+  copyCutScenes(cutScenes)
+  saveGraph(computeLimiar(frame1))
+      
+main()

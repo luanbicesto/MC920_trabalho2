@@ -1,0 +1,28 @@
+#!/bin/bash
+
+#pixel difference approach
+#clean final folder
+rm -rf ../finalVideos/toy/toyPixel.mp4
+python pixelDifference.py toy 9 5 2
+avconv -f image2 -i ../cutScenes/toy/pixelDifference/%04d.png -r 12 tmp/toyPixel.mp4
+
+#block difference approach
+#clean final folder
+rm -rf ../finalVideos/toy/toyBlock.mp4
+python blockDifference.py toy 81 3 1
+avconv -f image2 -i ../cutScenes/toy/blockDifference/%04d.png -r 12 tmp/toyBlock.mp4
+
+#histogram difference approach
+#clean final folder
+rm -rf ../finalVideos/toy/toyHistogram.mp4
+python histogramDifference.py toy 1 1 128
+avconv -f image2 -i ../cutScenes/toy/histogramDifference/%04d.png -r 12 tmp/toyHistogram.mp4
+
+#edge approach
+#clean final folder
+rm -rf ../finalVideos/toy/toyEdge.mp4
+python edgeDifference.py toy 0.99 2
+avconv -f image2 -i ../cutScenes/toy/edgeDifference/%04d.png -r 12 tmp/toyEdge.mp4
+
+#move all files to final folder
+mv tmp/*.* ../finalVideos/toy/
