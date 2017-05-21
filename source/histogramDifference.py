@@ -69,8 +69,6 @@ def main():
   meanAllDifferences = np.mean(allDifferences)
   stdAllDifferences = np.std(allDifferences)
   limiar = meanAllDifferences + (alpha * stdAllDifferences)
-  print limiar
-  print allDifferences
   
   #check for cut scenes
   for index in range(len(allDifferences)):
